@@ -168,21 +168,42 @@ async function pageEpisode(source, slug) {
   try {
     const d = await api(`episode?source=${source}&slug=${encodeURIComponent(slug)}`);
     const servers = d.servers || [];
+    const downloads = d.downloads || [];
     const firstUrl = servers[0] ? servers[0].url : '';
     app.innerHTML = `
       <div class="block-head"><h2><span class="dot"></span>${d.title}</h2></div>
       <div class="player-wrap" id="playerWrap">
         ${
           firstUrl
-            ? `<iframe src="${firstUrl}" allowfullscreen referrerpolicy="no-referrer"></iframe>`
+            ? `<iframe src="${firstUrl}" allowfullscreen allow="autoplay; fullscreen; encrypted-media" referrerpolicy="origin"></iframe>`
             : `<div class="placeholder">Link streaming tidak ditemukan di respons episode.<br>Cek panel debug di bawah untuk lihat field aslinya.</div>`
         }
       </div>
       ${
-        servers.length > 1
+        firstUrl
+          ? `<div class="placeholder" style="padding:8px 4px;font-size:12px;">Player blank/rusak? Situs sumber kadang menolak dibuka lewat iframe. <a href="${firstUrl}" target="_blank" rel="noopener">Coba buka langsung di tab baru</a>.</div>`
+          : ''
+      }
+      ${
+        servers.length > 0
           ? `<div class="servers" id="serverList">${servers
               .map((s, i) => `<button class="server-btn ${i === 0 ? 'active' : ''}" data-url="${s.url}">${s.label}</button>`)
               .join('')}</div>`
+          : ''
+      }
+      ${
+        downloads.length
+          ? `<div class="block-head" style="margin-top:20px;"><h2><span class="dot"></span>Unduh Episode</h2></div>
+             <div class="downloads">${downloads
+               .map(
+                 (g) => `<div class="dl-group">
+                   <div class="dl-res">${g.resolution}${g.size ? ` <span class="muted">(${g.size})</span>` : ''}</div>
+                   <div class="dl-links">${g.links
+                     .map((l) => `<a class="btn ghost small" href="${l.url}" target="_blank" rel="noopener">${l.provider}</a>`)
+                     .join('')}</div>
+                 </div>`
+               )
+               .join('')}</div>`
           : ''
       }
       <div class="ep-nav">
@@ -197,7 +218,8 @@ async function pageEpisode(source, slug) {
         btn.onclick = () => {
           serverList.querySelectorAll('.server-btn').forEach((b) => b.classList.remove('active'));
           btn.classList.add('active');
-          document.getElementById('playerWrap').innerHTML = `<iframe src="${btn.dataset.url}" allowfullscreen referrerpolicy="no-referrer"></iframe>`;
+          document.getElementById('playerWrap').innerHTML =
+            `<iframe src="${btn.dataset.url}" allowfullscreen allow="autoplay; fullscreen; encrypted-media" referrerpolicy="origin"></iframe>`;
         };
       });
     }
