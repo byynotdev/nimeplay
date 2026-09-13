@@ -1,0 +1,12 @@
+{
+  "name": "nimeplay",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Web nonton anime — frontend statis + serverless API di Vercel, menggabungkan data dari Kuramanime dan Otakudesu jadi satu feed.",
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "dev": "vercel dev"
+  }
+}
