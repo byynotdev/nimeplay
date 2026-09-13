@@ -34,9 +34,8 @@ module.exports = async (req, res) => {
       'defaultstreaming',
       'video',
     ]);
-    if (directEmbed) {
-      // Taruh default di posisi paling depan supaya jadi player pertama yang diputar.
-      servers = [{ label: 'Default', url: directEmbed }, ...servers.filter((s) => s.url !== directEmbed)];
+    if (directEmbed && !servers.some((s) => s.url === directEmbed)) {
+      servers = [{ label: 'Default', url: directEmbed }, ...servers];
     }
 
     // Fallback terakhir: nama field dari upstream tidak dikenali sama sekali,
@@ -45,13 +44,27 @@ module.exports = async (req, res) => {
       servers = findServersFallback(d);
     }
 
+    // Link unduhan (bukan buat player, tapi disediakan sebagai alternatif kalau
+    // semua server streaming diblokir/gagal dimuat di iframe).
+    const downloadGroups = Array.isArray(d.downloads)
+      ? d.downloads
+          .map((g) => ({
+            resolution: pick(g, ['resolution', 'quality'], ''),
+            size: pick(g, ['size'], ''),
+            links: (Array.isArray(g.links) ? g.links : [])
+              .map((l) => ({ provider: pick(l, ['provider', 'name'], 'Link'), url: pick(l, ['url', 'link']) }))
+              .filter((l) => l.url),
+          }))
+          .filter((g) => g.links.length)
+      : [];
+
     const prevRaw = pick(d, ['previous_episode_slug', 'prev_episode_slug', 'prev']);
     const nextRaw = pick(d, ['next_episode_slug', 'next']);
     const prevSlug = typeof prevRaw === 'object' ? pick(prevRaw, ['slug']) : prevRaw;
     const nextSlug = typeof nextRaw === 'object' ? pick(nextRaw, ['slug']) : nextRaw;
 
     res.setHeader('Cache-Control', 's-maxage=600, stale-while-revalidate=1800');
-    res.status(200).json({ source, title, servers, prevSlug, nextSlug, raw: d });
+    res.status(200).json({ source, title, servers, downloads: downloadGroups, prevSlug, nextSlug, raw: d });
   } catch (e) {
     res.status(502).json({ error: e.message });
   }
